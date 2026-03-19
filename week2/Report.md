@@ -111,32 +111,57 @@ The for loop was replaced with a *with open()* function set to *r* to acess the 
 with open("dataweek2/output.txt", "r") as f:
 data = f.read()
 ```
-Both codes can be ran now to see how long it takes each to read in a file and which performs better than the other.
+Both codes were then ran to see how long it takes each to read in a file and which performs better than the other.
 ```
-./bin/time_file_write data/testfile.txt 30000
-python3 week2/time_file_write.py data/testfile.txt 30000
+time ./bin/time_read 5000
+time python3 week2/time_read.py 5000
 ```
 
 ## Results:
 
 ### Part 1:
-real 0m0.006s                     
-user 0m0.000s                            
-sys 0m0.005s                           
+Running ls, returned this list of these folders as expected.
+*bin   dataweek2  PHY1090            vector_mpi_reduce         vector_mpi_send
+data  HPQC       vector_mpi_gather  vector_mpi_reduce_custom*
 
+The system was able to do this in the following time
+| Category | Time |
+| --- | --- |
+| real | 0m0.006s |
+| user | 0m0.000s |
+| sys | 0m0.005s |
 ### Part 2:
-#### Python script:                                   
-Hello World!                   
-real    0.035s                 
-user    0.023s              
-sys     0.008s     
+#### Hello World scritps:                                   
+After running *hello_world.py*, it printed out `Hello World!`    
+| Category | Time |
+| --- | --- |
+|real  |  0.035s  |               
+|user  |  0.023s |             
+|sys   |  0.008s|     
+  
+After running *hello_world.c*, it printed out `Hello World!`   
+| Category | Time |
+| --- | --- |
+|real  |  0.006s |                  
+|user  |  0.000s  |              
+|sys  |   0.004s  |
 
-#### C script:   
-Hello World!                             
-real    0.006s                   
-user    0.000s                
-sys     0.004s   
+#### Repeat Adder scripts: 
+| Source | Inputs | Solution | Real Time | User Time | Sys Time |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| `repeat_adder.py` | 2, 3 | 6 | 0.034s | 0.027s | 0.004s |
+| `repeat_adder.py` | 4, 5 | 20 | 0.034s | 0.026s | 0.004s |
+| `repeat_adder.py` | 41098, 54209 | 11314089 | 0.036s | 0.023s | 0.009s|
+| `repeat_adder.py` | 5823, 1943 | 11314089 | 0.036s | 0.027s | 0.004s|
+| `repeat_adder.c` | 2, 3 | 6 | 0.007s | 0.004s | 0.001s |
+| `repeat_adder.c` | 2, 3 | 6 | 0.005s | 0.004s | 0.000s |
+| `repeat_adder.c` | 41098, 54209 | -2067085814 | 0.006s | 0.000s | 0.004s|
+| `repeat_adder.c` | 5823, 1943 | 11314089 | 0.004s | 0.000s | 0.004s|
 
 ### Part 3:
-
+When this code is ran, it printed out a sequential list of all the integers starting from 0 up to the user prompted number.
+| Source | Input | Runtime for core loop | Real Time | User Time | Sys Time |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| `time_print.c` | 1000 | 0.000381s | 0.005s | 0.000s | 0.004s |
+| `time_print.py` | 1000 | 0.000544s | 0.036s | 0.028s | 0.004s |
 ### Part 4:
