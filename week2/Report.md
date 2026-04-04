@@ -162,6 +162,48 @@ After running *hello_world.c*, it printed out `Hello World!`
 When this code is ran, it printed out a sequential list of all the integers starting from 0 up to the user prompted number.
 | Source | Input | Runtime for core loop | Real Time | User Time | Sys Time |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| `time_print.c` | 1000 | 0.000381s | 0.005s | 0.000s | 0.004s |
-| `time_print.py` | 1000 | 0.000544s | 0.036s | 0.028s | 0.004s |
+| `time_print.c` | 10 | 1.566969s | 0.437s | 0.137s | 0.063s |
+| `time_print.c` | 100 |  0.000169s | 0.006s | 0.000s | 0.005s |
+| `time_print.c` | 1000 | 0.000365s | 0.004s | 0.000s | 0.004s |
+| `time_print.c` | 10000 | 0.002727s | 0.006s | 0.006s | 0.000s |
+| `time_print.py` | 10 | 1.5974044799804688e-05s | 0.039s | 0.024s | 0.008s |
+| `time_print.py` | 100 | 6.651878356933594e-05s | 0.032s | 0.027s | 0.004s |
+| `time_print.py` | 1000 | 0.000649s | 0.032s | 0.026s | 0.005s |
+| `time_print.py` | 10000 | 0.006794s | 0.039s | 0.024s | 0.012s |
+
 ### Part 4:
+#### Write file:
+| Source | Input | Runtime for core loop | Real Time | User Time | Sys Time |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| `time_write.py` | 1000 | 0.003458s | 0.039s | 0.023s | 0.008s |
+| `time_write.py` | 5000 | 0.003492s | 0.035s | 0.027s | 0.004s |
+| `time_write.py` | 90000 | 0.34918s | 0.068s | 0.051s | 0.004s |
+| `time_write.c` | 1000 | 0.000176s | 0.010s | 0.000s | 0.005s |
+| `time_write.c` | 5000 | 0.000808s | 0.009s | 0.000s | 0.005s |
+| `time_write.c` | 90000 | 0.009817s | 0.025s | 0.014s | 0.000s |
+
+#### Read file:
+| Source | Input | Runtime for core loop | Real Time | User Time | Sys Time |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| `time_read.py` | 1000 | 0.000116348s | 0.032s | 0.015s | 0.016s | 
+| `time_read.py` | 5000 | 0.000119686s | 0.033s | 0.028s | 0.005s |  
+| `time_read.py` | 90000 | 0.000308275s | 0.032s | 0.017s | 0.013s | 
+| `time_read.c` | 1000 | 0.001375s | 0.007s | 0.005s | 0.001 s | 
+| `time_read.c` | 5000 | 0.000857s | 0.006s | 0.000s | 0.004s | 
+| `time_read.c` | 90000 | 0.000302s | 0.004s | 0.000s | 0.004s |  
+
+## Discussion:
+The experiments explored how the runtimes of C and Python programs differ across different types of operations. Using both Linux time command and internal timing functions, it can be seen how each language behaves with increasing workloads.
+
+For the *Hello World* programs, the C code ran significantly faster than the Python code. However, the complete runtime for both programs was extremely small, which shows that for trivial tasks the difference in performance is negligible and either language is suitable. The observed difference is largely due to Python being an interpreted language with an additional startup overhead where C programs are compiled direclty to machine code, making it faster.
+
+In the *Repeat Adder* programs, the difference between both programs becomes more noticeable. For small input values, the runtime remain similar as the computation is done almost instantly, however as the input size is increased, the C program scaled much better than Python. This is due to that fact that python doesn't use fixed sized integers like C. Python stores numbers as big, flexible objects that can grow as large as needed, whilst C only stores numbers to about 7 decimal places. This makes Python's values more accurate but comes at the expense of computational timing.
+Due to C programs less flexible integer size, it gives integer overflow for very large inputs( greater than 2^31 -1), producing incorrect negative results.
+
+When examining the internal timing functions on the *time_print* functions, it can be seen that both programs had a unexpected output for very small inputs. It can be seen that the small inputs appeared to take longer to run than the larger ones. This is due to measurement noise and limited resolution of timing finctions for very short runtimes. 
+Excluding these outliers, the runtime increased with input size and Python runtimes were sligthly slower than C for complete runtime and for runtime of core loop. 
+
+For the file I/O operations, both languages showed an increase in runtime as the input size grew, but with writing to file being generally slower than reading due to the additional overhead of disk operations. Once again, C performed faster than Python especially for larger file sizes. This again is due to its lower overhead. 
+However for the runtime for the core loop, in some cases Python was much faster than C. This is likely due to differences in how timing was measured and how each language handles I/O operations internally. In Python, file operations are highly optimised and often buffered, meaning that the data may have be written to memory first and only later flushed to disk. This can make the measured loop appear faster, as the actual disk writing is deferred, while in contrast, C programs perform file operations more directly, causing the timing of the loop to include more of the actual I/O cost.
+
+Overall, it can be seen that C is generally faster than Python as C excels at raw computational power while python prioritises ease of use and flexibilty. C gives better performance for computation heavy and large scale tasks due to its compiled nature and efficient memory handling while python offers greater flexibility, simplicity, and no integer overflow, but at the cost of increased runtime. For small scale tasks Python is a good choice, however, for high performance computing or  where execution time is critical, C is the better choice.
