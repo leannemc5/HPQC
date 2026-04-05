@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-/* --- Function Prototypes --- */
+// function prototypes 
 void root_task(int my_rank, int uni_size);
 void client_task(int my_rank, int uni_size);
 void check_task(int my_rank, int uni_size);
@@ -14,34 +14,34 @@ int main(int argc, char **argv)
     int my_rank, uni_size;
     my_rank = uni_size = 0;
 
-    // Initialise the MPI execution environment
+    // initialise the MPI execution environment
     ierror = MPI_Init(&argc, &argv);
 
-    // Determine the unique ID (rank) and total number of processes (size)
+    // determine the rank and total number of processes
     ierror = MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     ierror = MPI_Comm_size(MPI_COMM_WORLD, &uni_size);
 
-    // Basic logic check: ensure there is more than 1 process to allow communication
+    // ensure there is more than 1 process to allow communication
     if (uni_size > 1)
     {
-        // Delegate specific work based on the process rank
+        // split specific work based on the process rank
         check_task(my_rank, uni_size);
     }
     else
     {
-        // Error handling for serial execution (single process)
+        // error handling for serial execution (single process)
         printf("Unable to communicate with less than 2 processes. Size = %d\n", uni_size);
     }
 
-    // Terminate the MPI environment cleanly
+    // end the MPI environment cleanly
     ierror = MPI_Finalize();
     return 0;
 }
 
-/*
- * check_task: Acts as a manager to separate the program flow.
- * It ensures Rank 0 acts as the receiver while others act as senders.
- */
+
+ // check_task: acts as a manager to separate the program flow
+ // ensures Rank 0 acts as the receiver while others act as senders
+ 
 void check_task(int my_rank, int uni_size)
 {
     if (0 == my_rank)
@@ -54,23 +54,22 @@ void check_task(int my_rank, int uni_size)
     }
 }
 
-/*
- * root_task: Executed only by Rank 0.
- * Listens for incoming messages from all other ranks in the communicator.
- */
+   // root_task: Executed only by Rank 0
+   // listens for incoming messages from all other ranks in the communicator
+
 void root_task(int my_rank, int uni_size)
 {
     int recv_message, source, count, tag;
     recv_message = source = tag = 0;
-    count = 1; // Expecting 1 integer per message
+    count = 1; // expecting 1 integer per message
     MPI_Status status;
 
-    // Loop through every other rank (1 to uni_size-1)
+    // loop through every other rank (1 to uni_size-1)
     for (int their_rank = 1; their_rank < uni_size; their_rank++)
     {
         source = their_rank;
 
-        // Blocking receive: waits until a message from 'source' arrives
+        // waits until a message from source arrives
         MPI_Recv(&recv_message, count, MPI_INT, source, tag, MPI_COMM_WORLD, &status);
 
         printf("Hello, I am %d of %d. Received %d from Rank %d\n",
@@ -78,10 +77,10 @@ void root_task(int my_rank, int uni_size)
     }
 }
 
-/*
- * client_task: Executed by all ranks except Rank 0.
- * Calculates a simple message and sends it to the root process.
- */
+
+  //client_task: executed by all ranks except Rank 0
+  //calculates a simple message and sends it to the root process
+ 
 void client_task(int my_rank, int uni_size)
 {
     int send_message, dest, count, tag;
@@ -91,12 +90,14 @@ void client_task(int my_rank, int uni_size)
     dest = 0; // The target for the message is always the root (Rank 0)
     send_message = my_rank * 10; // Non-trivial calculation for testing
 
-    // Blocking send: transfers the local message to the root process
+    // transfers the local message to the root process
     MPI_Request request;
     MPI_Status status;
+    // send the message and move on immediately
     MPI_Isend(&send_message, count, MPI_INT, dest, tag, MPI_COMM_WORLD, &request);
-
+    // perfrom printing while send happens in background
     printf("Hello, I am %d of %d. Sent %d to Rank %d\n",
             my_rank, uni_size, send_message, dest);
+    // wait for send to finish before moving on/changing the data
     MPI_Wait(&request, &status);
 }
