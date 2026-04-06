@@ -266,7 +266,95 @@ MPI_Op_free(&my_op);
 
 ## Results
 ### Activity 1:
-It was observed that the order of printed messages varied between runs. This is expected in MPI programs, as processes run independently and communication timing is not strictly ordered.
+The program was ran with 2,4, and 8 processes and in all cases each non root process sent a value to the root process, which then received and printed the messages.
+For 2 processes, a single messge was sent and received s expected. For 4 and 8 processes, multiple processes sent messages to the root and it was seen that all messages were successfuflly received by the root, the values sent were proprtional to the rank (i.e rank 3 sent 30) and the order of the output messages varied between runs
+An example output of a run from a 4 processes was:
+```
+No protocol specified
+Hello, I am 3 of 4. Sent 30 to Rank 0
+Hello, I am 0 of 4. Received 10 from Rank 1
+Hello, I am 0 of 4. Received 20 from Rank 2
+Hello, I am 0 of 4. Received 30 from Rank 3
+Hello, I am 1 of 4. Sent 10 to Rank 0
+Hello, I am 2 of 4. Sent 20 to Rank 0
+```
+For part 2, the code was restrucutured into seperate functions and the program was tested by running it with 4 processes.
+The results showed that the same messages were snet and received as in the original version, it produced the same numerical result, and the ordering of messages was still varied. 
+Output looked like this:
+```
+No protocol specified
+Hello, I am 3 of 4. Sent 30 to Rank 0
+Hello, I am 2 of 4. Sent 20 to Rank 0
+Hello, I am 1 of 4. Sent 10 to Rank 0
+Hello, I am 0 of 4. Received 10 from Rank 1
+Hello, I am 0 of 4. Received 20 from Rank 2
+Hello, I am 0 of 4. Received 30 from Rank 3
+```
 
-bsend
-Observation: This version was reliable but added significant complexity to the code due to the manual buffer setup. It is useful if you want to ensure the sender never blocks, but you must be careful to allocate enough memory.
+For part 3, the program was tested using 4 different MPI send variants to observe change in behaviour and reliability. Each test was performed with 4 processes.
+
+| Command | Result | Performance Observation |
+| :--- | :--- | :--- |
+| `MPI_Ssend` | Success | Rank 0 received all messages; workers blocked until the handshake was confirmed. |
+| `MPI_Bsend` | Success | Required manual buffer allocation; workers returned from the send call immediately. |
+| `MPI_Rsend` | Success | Completed successfully, but remains prone to failure if the receiver is not already waiting.| 
+| `MPI_Isend` | Success | Used `MPI_Request` and `MPI_Wait`; allowed local tasks to continue during transmission. |
+
+For part 4 benchmarking was used to capture the length of time it takes for each communication to happen for 4 processes.
+| Rank | Operation | Target/Source | Measured Time (s) |
+| :--- | :--- | :--- | :--- |
+| 0 | Receive | Rank 1 | 0.000113 |
+| 0 | Receive | Rank 2 | 0.000001 |
+| 0 | Receive | Rank 3 | 0.000032 |
+| 1 | Send | Rank 0 | 0.000010 |
+| 2 | Send | Rank 0 | 0.000014 |
+| 3 | Send | Rank 0 | 0.000021 |
+
+### Part 2:
+The *pingpong* program was executed using -np 2 to measure the time taken to exchange messages between a single root and a single client. 
+| Input (num_pings) | Final Counter | Total Elapsed Time (s) | Avg. Round-Trip Time (s) |
+| :--- | :--- | :--- | :--- |
+| 10 | 10 | 0.000026 | 0.000003 |
+| 1000 | 1000 | 0.001052 | 0.000001 |
+| 100000 | 100000 | 0.060396 | 0.000001 |
+
+The *pingpong_bandwidth* program was executed with -np 2 to measure how different data sizes affect transfer speed. The tests used a constant of 1000 pings while varying the number of elements in the array  from 8 bytes to 2 MiB.
+
+| Input (Pings) | Input (Elements) | Size (Bytes) | Avg. One-Way (s) | Bandwidth (MiB/s) |
+| :--- | :--- | :--- | :--- | :--- |
+| 1000 | 2 | 8 | 0.000001 | 13.39 |
+| 1000 | 262,144 | 1,048,576 | 0.000127 | 7884.85 |
+| 1000 | 524,288 | 2,097,152 | 0.000245 | 8154.92 |
+
+Data was processed and plotted in python script.
+![MPI Bandwidth Plot](bandwidth_plot.png)
+Linear fit was applied to the data to find calculated latency and bandwidth.
+```
+Calculated Latency (c): 2.33 microseconds (0.00000233 s)
+Calculated Bandwidth (1/m): 8196.69 MiB/s
+```
+### Activity 3:
+All following tests were conducted using -np 4.
+#### Part 1
+| Program | Input Size (N) | Processes (-np) | Final Sum | Time (s) |
+| :--- | :--- | :--- | :--- | :--- |
+| vector_add_mpi_broadcast.c | 12 | 4 | 506 | 0.000177 |
+| vector_add_mpi_diy.c | 12 | 4 | 506 | 0.000065 |
+| vector_add_mpi_scatter.c | 12 | 4 | 506 | 0.000096 |
+
+#### Part 2:
+| Method | Input Size (N) | Processes (-np) | Final Sum | Time (s) |
+| :--- | :--- | :--- | :--- | :--- |
+| vector_mpi_send.c | 10 | 4 | 285 | 0.000013 |
+| vector_mpi_gather.c | 10 | 4 | 285 | 0.000031 |
+| vector_mpi_reduce.c | 10 | 4 | 285 | 0.000027 |
+
+#### Part 3:
+| Input Size (N) | Final Sum | Predefined (s) | Custom (s) |
+| :--- | :--- | :--- | :--- |
+| 10 | 285 | 0.000027 | 0.000054 |
+| 100000 | 216,474,736 | 0.000186 | 0.000176 |
+| 10000000 | -1,039,031,360 | 0.013279 | 0.011366 |
+
+## Discussion
+### Part 1:
