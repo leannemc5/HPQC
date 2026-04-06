@@ -310,7 +310,7 @@ For part 4 benchmarking was used to capture the length of time it takes for each
 | 2 | Send | Rank 0 | 0.000014 |
 | 3 | Send | Rank 0 | 0.000021 |
 
-### Part 2:
+### Activity 2:
 The *pingpong* program was executed using -np 2 to measure the time taken to exchange messages between a single root and a single client. 
 | Input (num_pings) | Final Counter | Total Elapsed Time (s) | Avg. Round-Trip Time (s) |
 | :--- | :--- | :--- | :--- |
@@ -357,4 +357,39 @@ All following tests were conducted using -np 4.
 | 10000000 | -1,039,031,360 | 0.013279 | 0.011366 |
 
 ## Discussion
-### Part 1:
+### Activity 1:
+#### Part 1:
+It can be seen from running *comm_test_mpi* with 2,4, and 8 processors confirmed tha MPI processes oprate independently and asynchronously. It was seen that while the root received all the messages in the correct logical order, the physicial timing of the sent and recieved print statements was random. This confirms that in parallel processing, process ID doesn't dictate execution order.
+#### Part 2:
+This test showed that spliting the code into seperate functions for root and client didn't change how the program works. The results were identical to the original version, with the sent messages appeared in a random order and the received message staying in logical order. This is a clear sign of parallel processing as the processes didn't wait for eachother to reach the print command.
+#### Part 3:
+After running the 4 modified codes for each send variant, different behaviours were observed between the processes.
+
+Ssend was the safest and most predicatable as it forces the sender to wait until the receiver has started collecting the messages before the code moves on. This make it certain that the data was delivered. On the downside this makes the code slower but it is made up for with how good it is at preventing errors in complex programs and is one of the best choices for general use as its so reliable.
+Bsend was reliable for preventing processes get stuck waiting for each other forever. This is due to the message being stored in a manual buffer instead of the systems memory. This makes the sender more efficient by letting it continue almost immediately, but it adds a lot of extra work for the programmer and you have to calculate the correct buffer size and remeber to manually detach and free the memory to avoid leaks.
+Rsend was the least reliable option as it frequently crashed. THis is due to the root process needing to receive the messages in a strict 1,2,3 order. If a higher order rank sneds its message before the root is ready for it, it immediately crashes the program. This makes it unsuitable for a project unless you will have the receiver always waiting.
+Isend was the most complex but the most effiecient as it uses a request object to track the message which allows the processor to keep working on other tasks while the data is sent in the background. THe downside is that it requires a wait command at the end and without it, the program can crash. THis mode is best for high performance code where you want calculations to be performed whilst communication is happening.
+
+#### Part 4:
+From benchmarking the code it can be seen that the computational times for each function is very short. There was a large difference between the time to receive from Rank 1 and Rank 2, which is likely due to Rank 2's message waiting on Rank 1 to finish so it could be collected. As the times are very short, they can be easily affected by the systems noise
+This suggests that internal timing is much more useful for large tasks than for sending single small numbers.
+
+### Activity 2:
+#### Part 2:
+It was seen from running the *pingpong.c* code for a high number of iterations was nessecary for getting an accurate result. In smaller test, the noise for the system made timing inconsistent and was smoothed out by averaging the time over thousands of pings. THis provided a stable measurement of the actual time it tales for a message to travel between 2 processes. The results show that as the number of iterations increases, the average time per round trip becomes more consistent. This confirms that the initial cost of starting a communication is a constant factor that stays the same regardless of how many pings are sent.
+A safety test was also done with an inout of 100,000 and np 4, which succesfully triggered the internal error check: "Error: Ping-pong requires exactly 2 processes.
+This confirmed that the program's error handling ensures that the code only runs when the correct number of participants is present. It was also seen that the order of printed messages varied between the runs. This is expected as the processes run independently and communication timing is not stricitly ordered, leading to differnt processes reaching their print statements at slightly different times.
+
+#### Part 3:
+The results from the bandwidth tests show that the size of the message changes what limits the speed of the program. For very small messages, the system is limited by latency, however as the array size increase, the time per round trip begins to grow linerarly. This suggests that once the message is large enough, the bottleneck shifts from latency to badwidth, which is the max speed at which the hardware can push per second.
+From the python script latency and bandwidth were found. The y intercept (c) confirmed a low latency of 2.33 microseconds, which is the minimum time needed for any coomunication to happen. The gradient (m) showed that there is a high bandwidth of 8196.69 MiB/s which confirms that the cluster is effiecent at moving large datasets as the transfer speed stays fast and predicitable even as the message size increases to several megabytes.
+
+### Activity 3:
+#### Part 1:
+It was found that for a very small workload, the diy method was the fastest. This happened as the amount of data was small enoguh that the time spent setting up a collective like MPI_Scatter or MPI_Broadcast was actually longer than just sending the data. However the diy method is harder to write and maintain as it needs complex pointer math, which would make MPI_Scatter the better choicr for real applications as it automatically handles the splitting of the data ans scales better as the array size grows.
+#### Part 2:
+FFor collecting results back to the root, it was found that MPI_Send/Recv was the quickest for small test. Among the collective options MPI_reduce was much faster than MPI_Gather as MPI_gather has to bring every single message back to the root, and then sum them up through a loop. This makes MPI_Reduce more efficient as it save time by performing the math while the data is still moving through the network, saving the root from doing extra work.
+#### Part 3:
+Through the comparison of the predefined MPI_SUM vs the custom reduce function, it can be seen that both programs produce identical results across all the tested sizes. At the largest scale, both programs correctly showed an integer overflow, proving the logic was consistent.
+While the custom version performed well, the predefined version generally performed better due to its faster speeds as its highly optimised for the hardware, while the custom version needs the program to jump to a user defined function during every step of the reduction.
+
