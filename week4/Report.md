@@ -72,13 +72,13 @@ This variant was implemented to test asynchronous communication. This allows the
 MPI_Request request;
 MPI_Status status;
 
-// "Post" the send and move on immediately
+// send the message and move on immediately
 MPI_Isend(&send_message, count, MPI_INT, dest, tag, MPI_COMM_WORLD, &request);
 
-// Perform other work (like printing) while the send happens in the background
+//perfrom printing while send happens in background
 printf("Hello, I am %d of %d. Sent %d to Rank %d\n", my_rank, uni_size, send_message, dest);
 
-// Crucial: Wait for the send to finish before moving on or changing the data
+// wait for send to finish before moving on/changing the data
 MPI_Wait(&request, &status);
 ```
 To measure how long the communcation takes, the program was updated to include internal benchmarking. This allows for a direct measurement of how long each individual send and receive operation takes to complete.
@@ -134,11 +134,9 @@ To see how the amount of data affects communication speed, the program was chang
 The program was modified to accept a second command line argument that represents the number of elements in the array. 
 THe aim is to vary the number of elements from a datasize of 8b to 2MiB. To keep track of the pings without sending extra messages, the counter was put inside the first element of the payload array.
 ```
-// Allocate and initialize the array based on the size argument
 int *payload = (int *)malloc(num_elements * sizeof(int));
 for (int i = 0; i < num_elements; i++) payload[i] = 0;
 
-// Use the first element as the counter
 while (payload[0] < num_pings) {
     if (my_rank == 0) {
         MPI_Send(payload, num_elements, MPI_INT, 1, 0, MPI_COMM_WORLD);
@@ -182,7 +180,6 @@ Each process independently computes its part of the math and sends only the fina
 if (rank != 0) {
     MPI_Send(&partial_sum, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 } else {
-    // Root receives sums from each source
     MPI_Recv(&received_sum, 1, MPI_INT, source, 0, MPI_COMM_WORLD, &status);
 }
 ```
@@ -190,7 +187,6 @@ The second approach is manual pointer logic titled *vector_mpi_diy.c*. In this v
 ```
 if (rank == 0) {
     for (int i = 1; i < size; i++) {
-        // Use pointer math (full_vector + offset) to send specific chunks
         MPI_Send(full_vector + (i * chunk), chunk, MPI_INT, i, 0, MPI_COMM_WORLD);
     }
 }
@@ -202,10 +198,8 @@ MPI_Scatter(full_vector, chunk, MPI_INT, local_vector, chunk, MPI_INT, 0, MPI_CO
 The last approach is *mpi_broadcast.c*. This version ensures that every process has a complete, identical copy of the full vector in its local memory. 
 Each process then uses its rank to determine which specific part of the shared vector it is responsible for summing.
 ```
-// Rank 0 populates the vector, then everyone receives the full copy
 MPI_Bcast(my_vector, num_arg, MPI_INT, 0, MPI_COMM_WORLD);
 
-// Each process calculates its own starting index to work on its "slice"
 int start_idx = rank * chunk;
 int local_sum = sum_vector(&my_vector[start_idx], chunk);
 ```
@@ -218,13 +212,10 @@ The first approach is manual collection. Like done previously, the manual apprao
 The second approach is result collection using MPI_Gather which is used to automate the colllection of partial sums. 
 Instead of sending multiple send/receive calls, a single collective command takes the partial sum ffrom every process  into a preallocated array on the root.
 ```
-// Root prepares an array to hold one result from every process
 if (rank == 0) all_sums = malloc(size * sizeof(int));
 
-// Collect all partial sums into the root's array
 MPI_Gather(&partial_sum, 1, MPI_INT, all_sums, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-// Root must then manually loop through the gathered array to get the final total
 if (rank == 0) {
     for (int i = 0; i < size; i++) final_sum += all_sums[i];
 }
@@ -252,7 +243,6 @@ void my_sum(void *invec, void *inoutvec, int *len, MPI_Datatype *datatype)
 In the main function, the *MPI_Op_create* coomand was used to register the new function with the MPI enviroment which created a handle called *my_op* that MPI recognises as a valid reduction tool.
 ```
 MPI_Op my_op;
-// The '1' indicates the operation can be done in any order (commutative)
 MPI_Op_create(&my_sum, 1, &my_op);
 ```
 *my_op* was then passed directly into the *MPI_Reduce* function, which replaced the *MPI_SUM* used in previous steps.
